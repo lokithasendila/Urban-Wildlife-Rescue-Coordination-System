@@ -1,52 +1,69 @@
 package com.wildliferescue;
 
-import com.wildliferescue.exception.InvalidAnimalTypeException;
+import com.wildliferescue.exception.RescueSystemException;
 import com.wildliferescue.model.Animal;
 import com.wildliferescue.model.AnimalCondition;
-import com.wildliferescue.model.Equipment;
 import com.wildliferescue.model.Reporter;
 import com.wildliferescue.model.RescueIncident;
-import com.wildliferescue.model.RescueTeam;
-import com.wildliferescue.model.TeamMember;
+import com.wildliferescue.service.PriorityCalculator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        // ----- Create a rescue team -----
-        RescueTeam team = new RescueTeam("T001", 2);
-        team.addMember(new TeamMember("M001", "Kasun Fernando", "0759876543"));
-        team.addAnimalCategory("Bird");
-        team.addSkill("Bird Handling");
-        team.addSkill("Climbing");
-        team.addEquipment(new Equipment("E001", "Ladder"));
-        team.addEquipment(new Equipment("E002", "Animal Carrier"));
-        System.out.println("Team: " + team);
+        PriorityCalculator calculator = new PriorityCalculator();
+        List<RescueIncident> incidents = new ArrayList<>();
 
-        // ----- Create an incident -----
         try {
-            Reporter reporter = new Reporter("Nimal Perera", "0771234567", "nimal@gmail.com");
-            Animal bird = Animal.create("Bird", AnimalCondition.TRAPPED);
+            Reporter r = new Reporter("Nimal Perera", "0771234567", "nimal@gmail.com");
 
-            RescueIncident incident = new RescueIncident("INC001", bird, "Kandy Road, Colombo",
-                    true, 1, true, reporter);
-            incident.addRequiredEquipment(new Equipment("ladder"));
-            System.out.println("Incident: " + incident);
+            // INC001: injured bird, danger, high-risk location, 1 animal
+            incidents.add(new RescueIncident("INC001", Animal.create("Bird", AnimalCondition.INJURED),
+                    "Highway, Kadawatha", true, 1, true, r));
+            // INC002: displaced mammal, no danger, safe place, 1 animal
+            incidents.add(new RescueIncident("INC002", Animal.create("Mammal", AnimalCondition.DISPLACED),
+                    "Garden, Nugegoda", false, 1, false, r));
+            // INC003: trapped reptile, no danger, 3 animals
+            incidents.add(new RescueIncident("INC003", Animal.create("Reptile", AnimalCondition.TRAPPED),
+                    "Drain, Borella", false, 3, false, r));
+            // INC004: abandoned birds, 6 animals, danger
+            incidents.add(new RescueIncident("INC004", Animal.create("Bird", AnimalCondition.ABANDONED),
+                    "Roof, Dehiwala", false, 6, true, r));
 
-            // ----- Check if the team suits the incident -----
-            System.out.println("Can handle animal? " + team.canHandle(bird.getAnimalType()));
-            System.out.println("Has skill? " + team.hasSkill(incident.getRequiredSkill()));
-            System.out.println("Has equipment? " + team.hasEquipment(incident.getRequiredEquipment()));
-            System.out.println("Is available? " + team.isAvailable());
+            for (RescueIncident incident : incidents) {
+                calculator.assess(incident);
+            }
 
-            // ----- Assign the team -----
-            incident.assignTeam(team);
-            team.addIncident();
-            System.out.println("After assigning: " + incident);
-            System.out.println("Team now: " + team);
+            System.out.println("--- Before sorting ---");
+            for (RescueIncident i : incidents) {
+                System.out.println(i.getIncidentId() + " score " + i.getPriorityScore() + " -> " + i.getPriority());
+            }
 
-        } catch (InvalidAnimalTypeException e) {
-            System.out.println("Error: " + e.getMessage());
+            calculator.sortByUrgency(incidents);
+
+            System.out.println("\n--- After sorting (most urgent first) ---");
+            for (RescueIncident i : incidents) {
+                System.out.println(i.getIncidentId() + " score " + i.getPriorityScore() + " -> " + i.getPriority());
+            }
+
+            // ----- Invalid priority tests -----
+            System.out.println("\n--- Invalid priority tests ---");
+            try {
+                calculator.classify(-5);
+            } catch (RescueSystemException e) {
+                System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
+            }
+            try {
+                calculator.assess(null);
+            } catch (RescueSystemException e) {
+                System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
+            }
+
+        } catch (RescueSystemException e) {
+            System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
         }
     }
 }

@@ -4,84 +4,95 @@ import com.wildliferescue.exception.RescueSystemException;
 import com.wildliferescue.model.Animal;
 import com.wildliferescue.model.AnimalCondition;
 import com.wildliferescue.model.Equipment;
+import com.wildliferescue.model.IncidentStatus;
 import com.wildliferescue.model.Reporter;
 import com.wildliferescue.model.RescueIncident;
 import com.wildliferescue.model.RescueTeam;
-import com.wildliferescue.model.TeamStatus;
-import com.wildliferescue.service.TeamMatcher;
+import com.wildliferescue.service.IncidentManager;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        TeamMatcher matcher = new TeamMatcher();
+        IncidentManager manager = new IncidentManager();
 
         try {
-            // ----- Build five teams -----
-            List<RescueTeam> teams = new ArrayList<>();
-            teams.add(makeTeam("T001", 2, "Bird", "Bird Handling", true));     //perfect no work
-            teams.add(makeTeam("T002", 2, "Bird", "Bird Handling", false));    //no ladder
-            teams.add(makeTeam("T003", 2, "Mammal", "Mammal Handling", true)); //wrong animal
-            RescueTeam offDuty = makeTeam("T004", 2, "Bird", "Bird Handling", true);
-            offDuty.setStatus(TeamStatus.UNAVAILABLE);                         //off the duty
-            teams.add(offDuty);
-            RescueTeam busy = makeTeam("T005", 3, "Bird", "Bird Handling", true);
-            busy.addIncident();                                                // already has 1 incident
-            teams.add(busy);
+            // ----- Register two teams -----
+            RescueTeam birdTeam = new RescueTeam("T001", 2);
+            birdTeam.addAnimalCategory("Bird");
+            birdTeam.addSkill("Bird Handling");
+            birdTeam.addEquipment(new Equipment("Ladder"));
+            manager.registerTeam(birdTeam);
 
+            RescueTeam mammalTeam = new RescueTeam("T002", 1);
+            mammalTeam.addAnimalCategory("Mammal");
+            mammalTeam.addSkill("Mammal Handling");
+            manager.registerTeam(mammalTeam);
+
+            // ----- Report three incidents (IDs are generated automatically) -----
             Reporter reporter = new Reporter("Nimal Perera", "0771234567", "nimal@gmail.com");
 
-            // ----- Test 1: bird on a roof needing a ladder -----
-            System.out.println("--- Test 1: trapped bird needing a ladder ---");
-            RescueIncident birdIncident = new RescueIncident("INC001",
-                    Animal.create("Bird", AnimalCondition.TRAPPED), "Roof, Nugegoda", true, 1, true, reporter);
-            birdIncident.addRequiredEquipment(new Equipment("Ladder"));
+            RescueIncident a = manager.reportIncident(Animal.create("Mammal", AnimalCondition.DISPLACED),
+                    "Garden, Nugegoda", false, 1, false, reporter, null);
+            RescueIncident b = manager.reportIncident(Animal.create("Bird", AnimalCondition.INJURED),
+                    "Highway, Kadawatha", true, 1, true, reporter, List.of(new Equipment("Ladder")));
+            RescueIncident c = manager.reportIncident(Animal.create("Reptile", AnimalCondition.TRAPPED),
+                    "Drain, Borella", false, 3, false, reporter, null);
 
-            List<RescueTeam> suitable = matcher.findSuitableTeams(birdIncident, teams);
-            for (RescueTeam t : suitable) {
-                System.out.println("Suitable: " + t.getTeamId() + " (workload "
-                        + t.getCurrentIncidents() + "/" + t.getMaxIncidents() + ")");
+            System.out.println("--- Pending incidents, most urgent first ---");
+            for (RescueIncident i : manager.getPendingIncidents()) {
+                System.out.println(i.getIncidentId() + " | " + i.getPriority() + " (score " + i.getPriorityScore() + ")");
             }
 
-            Optional<RescueTeam> best = matcher.findBestTeam(birdIncident, teams);
-            System.out.println("Best team: " + (best.isPresent() ? best.get().getTeamId() : "none"));
+            // ----- Find and assign teams -----
+            System.out.println("\n--- Teams for " + b.getIncidentId() + " ---");
+            for (RescueTeam t : manager.findTeams(b.getIncidentId())) {
+                System.out.println("Suitable: " + t.getTeamId());
+            }
+            manager.assignTeam(b.getIncidentId(), "T001");
+            System.out.println("Assigned: " + manager.getIncident(b.getIncidentId()));
 
-            // ----- Test 2: no team can handle reptiles -----
-            System.out.println("\n--- Test 2: reptile, no suitable team ---");
-            RescueIncident reptileIncident = new RescueIncident("INC002",
-                    Animal.create("Reptile", AnimalCondition.TRAPPED), "Drain, Borella", false, 1, false, reporter);
+            System.out.println("\n--- Teams for " + c.getIncidentId() + " (reptile) ---");
+            System.out.println("Suitable teams: " + manager.findTeams(c.getIncidentId()).size()
+                    + " -> stays " + c.getStatus());
 
-            List<RescueTeam> none = matcher.findSuitableTeams(reptileIncident, teams);
-            System.out.println("Suitable teams found: " + none.size());
-            System.out.println("Incident status: " + reptileIncident.getStatus());
+            // ----- Update status -----
+            manager.updateStatus(b.getIncidentId(), IncidentStatus.COMPLETED);
+            System.out.println("\nAfter completion: " + b.getStatus() + ", team workload "
+                    + birdTeam.getCurrentIncidents() + "/" + birdTeam.getMaxIncidents());
 
-            // ----- Test 3: assign the best team (uses Step 4 checks) -----
-            System.out.println("\n--- Test 3: assign the best team ---");
-            birdIncident.assignTeam(best.get());
-            System.out.println(birdIncident);
-
-            // ----- Test 4: searching for an incident that is already assigned -----
-            System.out.println("\n--- Test 4: incident already assigned ---");
-            matcher.findSuitableTeams(birdIncident, teams);
+            System.out.println("\nStill pending: " + manager.getPendingIncidents().size());
 
         } catch (RescueSystemException e) {
             System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
         }
-    }
 
-    // Helper that builds a team quickly
-    private static RescueTeam makeTeam(String id, int max, String animal, String skill, boolean hasLadder)
-            throws RescueSystemException {
-        RescueTeam team = new RescueTeam(id, max);
-        team.addAnimalCategory(animal);
-        team.addSkill(skill);
-        if (hasLadder) {
-            team.addEquipment(new Equipment("Ladder"));
+        // ===== Error tests =====
+        System.out.println("\n--- Error tests ---");
+        try {
+            RescueTeam duplicate = new RescueTeam("T001", 1);
+            manager.registerTeam(duplicate);
+        } catch (RescueSystemException e) {
+            System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
         }
-        return team;
+        try {
+            Reporter r = new Reporter("Amali", "0712345678", "amali@gmail.com");
+            manager.addIncident(new RescueIncident("INC001", Animal.create("Bird", AnimalCondition.INJURED),
+                    "Colombo 7", false, 1, false, r));
+        } catch (RescueSystemException e) {
+            System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
+        }
+        try {
+            manager.getIncident("INC999");
+        } catch (RescueSystemException e) {
+            System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
+        }
+        try {
+            manager.assignTeam("INC003", "T002");
+        } catch (RescueSystemException e) {
+            System.out.println("ERROR [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
+        }
     }
 }

@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-// A single reported incident.
+import com.wildliferescue.exception.InvalidIncidentDataException;
+
+//a single reported incident.
 public class RescueIncident {
 
     private String incidentId;
@@ -31,28 +33,28 @@ public class RescueIncident {
         this.immediateDanger = immediateDanger;
         this.reporter = reporter;
         this.requiredEquipment = new ArrayList<>();
-        this.status = IncidentStatus.PENDING_ASSIGNMENT;   // every new incident starts here
+        this.status = IncidentStatus.PENDING_ASSIGNMENT;   //every new incident starts here
         this.priorityScore = 0;
-        this.priority = null;                              // set later by PriorityCalculator
-        this.assignedTeam = null;                          // no team yet
+        this.priority = null;                              //set later by PriorityCalculator
+        this.assignedTeam = null;                          //no team yet
     }
 
     public void addRequiredEquipment(Equipment item) {
         requiredEquipment.add(item);
     }
 
-    // The skill needed comes from the animal (polymorphism)
+    //the skill needed comes from the animal (polymorphism)
     public String getRequiredSkill() {
         return animal.getRequiredSkill();
     }
 
-    // Called by the PriorityCalculator in Step 5
+    //called by the PriorityCalculator in Step 5
     public void setPriority(int score, PriorityLevel level) {
         this.priorityScore = score;
         this.priority = level;
     }
 
-    // Links a team to this incident
+    //tinks a team to this incident
     public void assignTeam(RescueTeam team) {
         this.assignedTeam = team;
         this.status = IncidentStatus.ASSIGNED;
@@ -62,11 +64,32 @@ public class RescueIncident {
         this.status = newStatus;
     }
 
+    //used ONLY when loading an incident from a file: puts back its saved priority, status and team
+    public void restoreState(int score, PriorityLevel level, IncidentStatus status, RescueTeam team)
+            throws InvalidIncidentDataException {
+        if (status == null) {
+            throw new InvalidIncidentDataException("Incident " + incidentId + ": status is missing.");
+        }
+        boolean needsTeam = (status != IncidentStatus.PENDING_ASSIGNMENT);
+        if (needsTeam && team == null) {
+            throw new InvalidIncidentDataException("Incident " + incidentId + " is " + status
+                    + " but has no team.");
+        }
+        if (!needsTeam && team != null) {
+            throw new InvalidIncidentDataException("Incident " + incidentId
+                    + " is pending but has a team assigned.");
+        }
+        this.priorityScore = score;
+        this.priority = level;
+        this.status = status;
+        this.assignedTeam = team;
+    }
+
     public boolean isPending() {
         return status == IncidentStatus.PENDING_ASSIGNMENT;
     }
 
-    // ----- Getters -----
+    //getters
 
     public String getIncidentId() {
         return incidentId;

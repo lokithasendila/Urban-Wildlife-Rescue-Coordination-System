@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-// A rescue team with its members, skills, equipment and workload.
+import com.wildliferescue.exception.InvalidTeamException;
+
+//a rescue team with its members, skills, equipment and workload.
 public class RescueTeam {
 
     private String teamId;
@@ -27,7 +29,7 @@ public class RescueTeam {
         this.equipment = new ArrayList<>();
     }
 
-    // ----- Methods to build up the team -----
+    //methods to build up the team
 
     public void addMember(TeamMember member) {
         members.add(member);
@@ -45,7 +47,7 @@ public class RescueTeam {
         equipment.add(item);
     }
 
-    // ----- Methods used for team matching -----
+    //methods used for team matching
 
     // Can this team handle this type of animal? e.g. "Bird"
     public boolean canHandle(String animalType) {
@@ -57,7 +59,7 @@ public class RescueTeam {
         return false;
     }
 
-    // Does this team have this skill? e.g. "Bird Handling"
+    //does this team have this skill? e.g. "Bird Handling"
     public boolean hasSkill(String skill) {
         for (String s : skills) {
             if (s.equalsIgnoreCase(skill)) {
@@ -67,7 +69,7 @@ public class RescueTeam {
         return false;
     }
 
-    // Does this team have ALL the equipment in the list?
+    //does this team have ALL the equipment in the list
     public boolean hasEquipment(List<Equipment> requiredItems) {
         return equipment.containsAll(requiredItems);
     }
@@ -82,7 +84,7 @@ public class RescueTeam {
         return maxIncidents - currentIncidents;
     }
 
-    // ----- Methods to update workload -----
+    //methods to update workload
 
     public void addIncident() {
         currentIncidents++;
@@ -97,8 +99,20 @@ public class RescueTeam {
             status = TeamStatus.AVAILABLE;
         }
     }
+        // Used ONLY when loading a team from a file: puts back its saved status and workload
+    public void restoreState(TeamStatus status, int currentIncidents) throws InvalidTeamException {
+        if (status == null) {
+            throw new InvalidTeamException("Team " + teamId + ": status is missing.");
+        }
+        if (currentIncidents < 0 || currentIncidents > maxIncidents) {
+            throw new InvalidTeamException("Team " + teamId + ": current incidents must be between 0 and "
+                    + maxIncidents + " (got " + currentIncidents + ").");
+        }
+        this.status = status;
+        this.currentIncidents = currentIncidents;
+    }
 
-    // ----- Getters and setters -----
+    //getters and setters
 
     public String getTeamId() {
         return teamId;

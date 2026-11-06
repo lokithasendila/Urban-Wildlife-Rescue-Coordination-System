@@ -1,1 +1,5 @@
-teamId,teamMembers,animalCategories,rescueSkills,equipment,status,maxSimultaneousIncidents
+"teamId,members,animalCategories,skills,equipment,status,maxIncidents,currentIncidents",teamMembers,animalCategories,rescueSkills,equipment,status,maxSimultaneousIncidents
+"T001,M001:Kasun Fernando:0759876543;M002:Dilani Silva:0712223344,Bird,Bird Handling;Climbing,E001:Ladder;E002:Animal Carrier,AVAILABLE,2,0",,,,,,
+"T002,M003:Nuwan Jayasinghe:0771112233,Mammal,Mammal Handling,E002:Animal Carrier;E003:Net,AVAILABLE,3,0",,,,,,
+"T003,M004:Ishara Perera:0756667788;M005:Ruwan Silva:0701234567,Reptile;Mammal,Reptile Handling;Mammal Handling,E004:Snake Tongs;E002:Animal Carrier,AVAILABLE,2,0",,,,,,
+"T004,M006:Chamari Fernando:0723334455,Bird;Mammal,Bird Handling;Mammal Handling;Climbing,E001:Ladder;E005:Rope;E002:Animal Carrier,UNAVAILABLE,1,0",,,,,,

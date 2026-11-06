@@ -13,6 +13,7 @@ import com.wildliferescue.model.RescueIncident;
 import com.wildliferescue.model.RescueTeam;
 import com.wildliferescue.model.TeamMember;
 import com.wildliferescue.model.TeamStatus;
+import com.wildliferescue.model.IncidentReport;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -32,6 +33,9 @@ public class FileManager {
             "incidentId,animalType,condition,location,highRiskLocation,numberOfAnimals,immediateDanger,"
             + "requiredEquipment,reporterName,reporterContact,reporterEmail,priorityScore,priority,"
             + "status,assignedTeamId";
+    public static final String REPORT_HEADER =
+            "animalType,condition,location,highRiskLocation,numberOfAnimals,immediateDanger,"
+            + "requiredEquipment,reporterName,reporterContact,reporterEmail";
 
     //rows that could not be loaded are skipped and described here
     private List<String> warnings = new ArrayList<>();
@@ -148,6 +152,42 @@ public class FileManager {
 
         incident.restoreState(score, level, parseEnum(IncidentStatus.class, f.get(13), "status"), team);
         return incident;
+    }
+
+    //report incoming
+
+    //reads a file of new reports that have not been checked yet.
+    //only the format is checked here.
+    //the details themse
+    public List<IncidentReport> loadIncomingReports(String path)
+            throws FileOperationException, InvalidCsvDataException {
+        warnings.clear();
+        List<String> lines = readAllLines(path);
+        checkHeader(lines, REPORT_HEADER, path);
+
+        List<IncidentReport> reports = new ArrayList<>();
+        for (int i = 1; i < lines.size(); i++) {
+            if (lines.get(i).isBlank()) {
+                continue;
+            }
+            try {
+                List<String> f = parseCsvLine(lines.get(i));
+                if (f.size() != 10) {
+                    throw new InvalidCsvDataException("expected 10 fields but found " + f.size());
+                }
+                IncidentReport report = new IncidentReport(f.get(0),
+                        parseEnum(AnimalCondition.class, f.get(1), "condition"), f.get(2),
+                        parseBoolean(f.get(3), "highRiskLocation"), parseInt(f.get(4), "numberOfAnimals"),
+                        parseBoolean(f.get(5), "immediateDanger"), f.get(7), f.get(8), f.get(9));
+                for (String item : splitList(f.get(6))) {
+                    report.addRequiredEquipment(parseEquipment(item));
+                }
+                reports.add(report);
+            } catch (InvalidCsvDataException e) {
+                warnings.add("Line " + (i + 1) + " skipped: " + e.getMessage());
+            }
+        }
+        return reports;
     }
 
     //saving

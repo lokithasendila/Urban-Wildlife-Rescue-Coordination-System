@@ -8,6 +8,8 @@ import com.wildliferescue.exception.InvalidIncidentDataException;
 
 //a single reported incident.
 public class RescueIncident {
+    
+    public static final int MAX_ANIMALS = 100;
 
     private String incidentId;
     private Animal animal;

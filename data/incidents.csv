@@ -1,1 +1,1 @@
-incidentId,animalType,condition,location,numberOfAnimals,immediateDanger,specialRequirements,reporterContact,priority,status,assignedTeamId
+"incidentId,animalType,condition,location,highRiskLocation,numberOfAnimals,immediateDanger,requiredEquipment,reporterName,reporterContact,reporterEmail,priorityScore,priority,status,assignedTeamId",animalType,condition,location,numberOfAnimals,immediateDanger,specialRequirements,reporterContact,priority,status,assignedTeamId
